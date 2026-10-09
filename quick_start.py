@@ -1,5 +1,8 @@
 import pcgym
 import numpy as np
+# import matplotlib
+# matplotlib.use("TkAgg")
+import matplotlib.pyplot as plt
 
 # Simulation variables
 nsteps = 100
@@ -31,11 +34,20 @@ obs, state = env.reset()
 
 print("Initial observation:", obs)
 
-# Advance 10 steps with a random control input
-for t in range(10):
-    action = env.action_space.sample()
+# List to preserve the observation
+concentrations = [obs[0]]
+temperatures = [obs[1]]
 
+# Set a specific control variable
+action = np.array([298])
+
+# Simulation
+for t in range(nsteps):
     obs, rew, done, term, info = env.step(action)
+
+    # preserve the observation
+    concentrations.append(obs[0])
+    temperatures.append(obs[1])
 
     print(f"step {t+1}: observation={obs}, reward={rew}")
 
@@ -43,3 +55,29 @@ for t in range(10):
         break
 
 env.close()
+
+# Timeline
+time = np.arange(len(concentrations)) * (T / nsteps)
+
+# Create a Graph
+fig, axes = plt.subplots(2, 1, figsize=(10, 7))
+
+# Concentration Graph
+axes[0].plot(time, concentrations, label="Concentrations Ca")
+axes[0].set_xlabel("Time")
+axes[0].set_ylabel("Concentration")
+axes[0].legend()
+
+# Humidity Graph
+axes[1].plot(time, temperatures, label="Reactor Temperature")
+axes[1].set_xlabel("Time")
+axes[1].set_ylabel("Temperature [K]")
+axes[1].set_title("Reactor Temperature")
+axes[1].legend()
+axes[1].grid(True)
+
+plt.tight_layout()
+plt.savefig("cstr_result.png", dpi=300, bbox_inches="tight")
+plt.close()
+
+# plt.show()
