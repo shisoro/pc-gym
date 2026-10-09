@@ -1,0 +1,17 @@
+# Python virtual environment
+pc-gym/
+.pc-gym/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# VSCode local settings
+.vscode/
+
+# Generated results
+results/
+outputs/
+
+# Environment variables
+.env
