@@ -1,4 +1,5 @@
 import pcgym
+import numpy as np
 
 # Simulation variables
 nsteps = 100
@@ -19,7 +20,7 @@ env_params = {
     'o_space' : observation_space, 
     'a_space' : action_space, 
     'x0': np.array([0.8, 330, 0.8]), # Initial conditions [Ca, T, Ca_SP]
-    'model': 'cstr_ode', # Select the model
+    'model': 'cstr', # Select the model
 }
 
 # Create environment
@@ -28,8 +29,17 @@ env = pcgym.make_env(env_params)
 # Reset the environment
 obs, state = env.reset()
 
-# Sample a random action
-action = env.action_space.sample()
+print("Initial observation:", obs)
 
-# Perform a step in the environment
-obs, rew, done, term, info = env.step(action)
+# Advance 10 steps with a random control input
+for t in range(10):
+    action = env.action_space.sample()
+
+    obs, rew, done, term, info = env.step(action)
+
+    print(f"step {t+1}: observation={obs}, reward={rew}")
+
+    if done or term:
+        break
+
+env.close()
