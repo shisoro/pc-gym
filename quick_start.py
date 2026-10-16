@@ -29,7 +29,7 @@ env_params = {
 # Create environment
 env = pcgym.make_env(env_params)
 
-# Reset the environment
+# Reset the environment (normalized from environment to obserbation)
 obs, state = env.reset()
 
 print("Initial observation:", obs)
@@ -38,18 +38,47 @@ print("Initial observation:", obs)
 concentrations = [obs[0]]
 temperatures = [obs[1]]
 
-# Set a specific control variable
-action = np.array([298])
+# Proportional control parameter
+Kp = 10.0
+Tc_base = 298.0
 
 # Simulation
 for t in range(nsteps):
+    # Denormalization the current concentration
+    Ca = (obs[0] + 1) / 2 * (1.0 - 0.7) + 0.7
+
+    # Current target concentration
+    Ca_SP = SP['Ca'][t]
+
+    # Control error
+    error = Ca_SP - Ca
+
+    # Proportional control
+    Tc = Tc_base - Kp * error
+    # Tc = 298 - 0.5 = 297.5
+
+    # Control Variable Limits
+    Tc = np.clip(Tc, 295, 302)
+
+    # Control input
+    action = np.array([Tc])
+
     obs, rew, done, term, info = env.step(action)
 
     # preserve the observation
     concentrations.append(obs[0])
     temperatures.append(obs[1])
 
-    print(f"step {t+1}: observation={obs}, reward={rew}")
+    
+
+    print(
+        f"step={t+1}, "
+        f"Ca={Ca:.4f}, "
+        f"SP={Ca_SP:.4f}, "
+        f"Tc={Tc:.2f}, "
+        f"concentration={obs[0]:.4f}, "
+        f"temperatures={obs[1]:.4f}"
+    )
 
     if done or term:
         break
