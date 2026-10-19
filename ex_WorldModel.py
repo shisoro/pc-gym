@@ -142,6 +142,15 @@ class _MDNRNN(keras.Model):
 
 
 
+class _Controller(keras.Model):
+    def __init__(self):
+        super().__init__()
+
+        self.out_layer = kl.Dense(self.action_num)  # アクション数が引数
+
+    def call(self, z, hidden_state):
+        x = tf.concat([z, hidden_state[1]], axis=1)
+        return self.out_layer(x)
 
 
 
