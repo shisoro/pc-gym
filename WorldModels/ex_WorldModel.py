@@ -60,45 +60,45 @@ class _MDNRNN(keras.Model):
     def __init__(self):
         super().__init__()
 
-        self.action_num = 0    # アクション数
-        self.z_size = 0        # VAEの潜在空間のサイズ
-        self.num_mixture = 0   # 正規分布の数
-        self.temperature = 0   # 温度パラメータ
+        self.action_num = 3    # アクション数
+        self.z_size = 32        # VAEの潜在空間のサイズ
+        self.num_mixture = 5   # 正規分布の数
+        self.temperature = 1.0   # 温度パラメータ
 
-        # --- RNN(LSTM)
+        # --- RNN(LSTM) --- ## x, h, c = kl.LSTM(隠れ状態の次元数, すべての時刻の隠れ状態を返すかどうか, 最後の時刻の隠れ状態を返すかどうか)
         self.lstm_layer = kl.LSTM(256, return_sequences=True, return_state=True)
 
-        # --- MDN
+        # --- MDN --- ## 全結合層の計算: y = Wx+b -> MDN
         self.mdn_layer = kl.Dense(self.z_size * self.num_mixture * 3)
 
     def call(self, z, onehot_actions, hidden_state, training=False):
-        batch_size = z.shape[0] # zの行の数
-        timesteps = z.shape[1]  # zの列の数
+        batch_size = z.shape[0] # zの行の数：バッチサイズ
+        timesteps = z.shape[1]  # zの列の数：時系列の長さ
 
-        # z + action
+        # z + action    ## axisは次元数 axis=2は特徴量の次元を表す ## 入力データと行動データを統合して一つの入力データにする
         x = tf.concat([z, onehot_actions], axis=2)
 
-        # (batch, timesteps, z + action) -> (batch, timesteps, lstm_dim)
+        # (batch, timesteps, z + action) -> (batch, timesteps, lstm_dim)    ## LSTMの実行
         x, h, c = self.lstm_layer(x, initial_state=hidden_state, training=training)
 
-        # -> (batch * timesteps, lstm_dim)
+        # -> (batch * timesteps, lstm_dim)  ## LSTMの出力 h_t をMDNの全結合層に渡すために次元を調整（KerasのDenseは3次元テンソルも処理できるため、必須ではない）
         x = tf.reshape(x, (batch_size * timesteps, -1))
 
-        # -> (batch * timesteps, z * num_mix * 3)
+        # -> (batch * timesteps, z * num_mix * 3)   ## MDNによる確率分布の生成
         x = self.mdn_layer(x, training=training)
 
-        # -> (batch * timesteps, z, num_mix * 3)
+        # -> (batch * timesteps, z, num_mix * 3)    ## 混合係数,平均,標準偏差を渡しやすくするために次元を調整
         x = tf.reshape(x, (-1, self.z_size, self.num_mixture * 3))
 
         # -> (batch * timesteps, z, num_mix) * 3
-        pi, mu, log_sigma = tf.split(x, 3, axis=2)
+        pi, mu, log_sigma = tf.split(x, 3, axis=2)  ## 各値を取得する
 
         return pi, mu, log_sigma, [h, c]
 
     def forward(self, z, action, hidden_state, rnn_only: bool = True):
         """ 1ステップ進める（主にhidden_state用）"""
 
-        onehot_actions = tf.one_hot(np.array([action]), self.action_num, axis=1)
+        onehot_actions = tf.one_hot(np.array([action]), self.action_num, axis=-1)
 
         # (batch, shape) -> (batch, 1, shape)
         z = z[:, np.newaxis, ...]
@@ -114,15 +114,16 @@ class _MDNRNN(keras.Model):
         batch = z.shape[0]
         z_size = z.shape[2] # zのチャンネル数（RGB画像の場合: 3）
 
-        sigma = np.exp(log_sigma)
+        sigma = tf.exp(log_sigma)
 
         if self.temperature > 0:
             # softmax
-            pi /= self.temperature # adjust temperatures
-            pi = pi - tf.reduce_max(pi, axis=1, keepdims=True)  # overflow_protection
-            exp_pi = tf.exp(pi)
-            pi = exp_pi / tf.reduce_sum(exp_pi, axis=1, keepdims=True)
+            pi = tf.nn.softmax(
+                pi / self.temperature,  # adjust temperatures   ## 温度を小さくすると、選ばれる正規分布が固定化されやすくなる
+                axis=-1
+            )        
 
+        # --- 選ばれた正規分布から値をサンプリングして、次の潜在変数とする
         samples = np.zeros((batch, z_size))
         for i in range(batch):
             for j in range(z_size):
@@ -130,13 +131,14 @@ class _MDNRNN(keras.Model):
                     # 最大値(決定的)
                     idx = np.argmax(pi[i][j])
                     z = mu[i][j][idx]
-                else:
-                    idx = random.choices([i for i in range(self.num_mixture)], weights=pi[i][j])
-                    z = np.random.normal(mu[i][j][idx], sigma[i][j][idx] * self.temperature)
+                else:                    
+                    idx = random.choices([i for i in range(self.num_mixture)], weights=pi[i][j])    # 混合係数から正規分布を選択
+                    z = np.random.normal(mu[i][j][idx], sigma[i][j][idx] * self.temperature)    # サンプリング
                 samples[i][j] = z
 
         return samples, hidden_state
 
+    # --- LSTMの初期状態を生成
     def get_initial_state(self):
         return self.lstm_layer.cell.get_initial_state(batch_size=1, dtype=tf.float32)
 
@@ -145,10 +147,10 @@ class _MDNRNN(keras.Model):
 class _Controller(keras.Model):
     def __init__(self):
         super().__init__()
-
         self.out_layer = kl.Dense(self.action_num)  # アクション数が引数
 
     def call(self, z, hidden_state):
+        # a_t = W_c[z_t h_t] + b_c  # 累計報酬を最大化するように予想された方策関数
         x = tf.concat([z, hidden_state[1]], axis=1)
         return self.out_layer(x)
 
