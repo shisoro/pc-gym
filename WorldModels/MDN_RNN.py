@@ -20,38 +20,38 @@ class _MDNRNN(keras.Model):
         )
 
         # --- MDN --- 
-        ## 全結合層の計算: y = Wx+b -> MDN
+        ## 全結合層の計算: y = Wx+b -> MDN  
         self.mdn_layer = kl.Dense(
-            self.z_size * self.num_mixture * 3
+            self.z_size * self.num_mixture * 3  # 出力数
         )
 
     def call(self, z, onehot_actions, hidden_state, training=False):
-        # z + action  (32,3)   ## 入力と行動を統合して一つの入力データにする
+        # z + action  (32,10,32) + (32,10,3) = (32,10,35)   ## 入力と行動を統合して一つの入力データにする
         x = tf.concat([z, onehot_actions], axis=-1)     # axis=-1は最後の軸
 
-        # LSTMの実行    LSTMの出力：(32,3,256)
+        # LSTMの実行    LSTMの出力：(32,10,256)
         x, h, c = self.lstm_layer(
             x, 
             initial_state=hidden_state,
             training=training
         )
 
-        # MDNによる確率分布の生成   MDNの出力：(32,3,480)
+        # MDNによる確率分布の生成   MDNの出力：(32,10,480)
         x = self.mdn_layer(x, training=training)
             
         ## 混合係数,平均,標準偏差を渡しやすくするために次元を調整         
-        shape = tf.shape(x) # (32,3,480)
-        # (batch, timesteps, z_size, num_mix * 3) = (32, 3, 32, 15)
+        shape = tf.shape(x) # (32,10,480)
+        # (batch, timesteps, z_size, num_mix * 3) = (32, 10, 32, 15)
         x = tf.reshape(x, (shape[0], shape[1], self.z_size, self.num_mixture * 3))
 
         # 混合分布のパラメータ
         # 15種類のパラメータを３つに分割
-        pi, mu, log_sigma = tf.split(x, 3, axis=-1)  ## 各値(32,3,32,5)を取得する 
+        pi, mu, log_sigma = tf.split(x, 3, axis=-1)  ## 各値(32,10,32,5)を取得する 
 
         return pi, mu, log_sigma, [h, c]
 
     def forward(self, z, action, hidden_state, rnn_only: bool = True):
-        # z: (batch, z_size)
+        # z: (batch, z_size)    ## batch次元はVAEで付与
         # action: (batch,)の整数行動
 
         # リストやnumpy配列 -> テンソル
@@ -137,6 +137,17 @@ class _MDNRNN(keras.Model):
         return samples, hidden_state
 
     # --- LSTMの初期状態を生成
-        def get_initial_state(self):
-            return self.lstm_layer.cell.get_initial_state(batch_size=1, dtype=tf.float32)
+        # --- LSTMの初期状態を生成
+    def get_initial_state(self, batch_size=1):
+        h = tf.zeros(
+            (batch_size, self.lstm_layer.units),
+            dtype=tf.float32
+        )
+
+        c = tf.zeros(
+            (batch_size, self.lstm_layer.units),
+            dtype=tf.float32
+        )
+
+        return [h, c]
     
