@@ -50,7 +50,7 @@ class _MDNRNN(keras.Model):
 
         return pi, mu, log_sigma, [h, c]
 
-    def forward(self, z, action, hidden_state, rnn_only: bool = True):
+    def rnn(self, z, action, hidden_state, rnn_only: bool = True):
         # z: (batch, z_size)    ## batch次元はVAEで付与
         # action: (batch,)の整数行動
 
@@ -137,7 +137,6 @@ class _MDNRNN(keras.Model):
         return samples, hidden_state
 
     # --- LSTMの初期状態を生成
-        # --- LSTMの初期状態を生成
     def get_initial_state(self, batch_size=1):
         h = tf.zeros(
             (batch_size, self.lstm_layer.units),

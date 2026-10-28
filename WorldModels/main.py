@@ -1,9 +1,13 @@
+import pcgym
 import tensorflow as tf
-from tensorflow import keras
 
+from tensorflow import keras
 from config import Config
+from vae import VAE
 from MDN_RNN import MDNRNN
 from train_RNN import train_rnn_step
+from train_controller import train_controller
+from evaluate import evaluate_controller
 
 
 def main():

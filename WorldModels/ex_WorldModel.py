@@ -7,20 +7,24 @@ from dataclasses import dataclass
 class _VAE(keras.Model):    # keras.Model : NNのlayerをまとめて、学習・推論・評価・保存などの機能を提供する中心的なクラス
     def __init__(self):     # self : 現在操作しているインスタンス自身を参照する変数
         super().__init__()
-
+        
         self.z_size = 32 # 潜在空間のサイズ
 
         # --- encoder
-        input_shape = (64, 64, 3)
+        # TensorFlowはバッチ処理のため、(batch_size, shape(input_shape))を入力する
+        input_shape = (64, 64, 3)   
+        # CNNの入力テンソルの次元を定義
         in_layer = c = kl.Input(shape=input_shape)  # 右辺の結果を両方の変数に代入, Input()の引数shapeに値を渡している。
         c = kl.Conv2D(filters=32, kernel_size=4, strides=2, activation="relu")(c)
         c = kl.Conv2D(filters=64, kernel_size=4, strides=2, activation="relu")(c)
         c = kl.Conv2D(filters=128, kernel_size=4, strides=2, activation="relu")(c)
         c = kl.Conv2D(filters=256, kernel_size=4, strides=2, activation="relu")(c)
         c = kl.Flatten()(c) # 多次元のデータを１次元に変換する層を適用
-        z_mean = kl.Dense(self.z_size)(c)   #
+        z_mean = kl.Dense(self.z_size)(c)   # Dense: y=Wx+bを定義
         z_log_var = kl.Dense(self.z_size)(c)
-        self.encoder = keras.Model(in_layer, [z_mean, z_log_var])   # model = keras.Model(inputs, outputs)
+        # 出力数＝self.z_size
+        # model = keras.Model(inputs, outputs)　
+        self.encoder = keras.Model(in_layer, [z_mean, z_log_var])   # ネットワークの入出力を指定
 
         # --- decoder
         in_state = c = kl.Input(shape=(self.z_size,))
@@ -39,7 +43,7 @@ class _VAE(keras.Model):    # keras.Model : NNのlayerをまとめて、学習�
         z_mean, z_log_var = self.encoder(x, training=training)
 
         # reparameterize
-        e = tf.random.normal(z_mean.shape)
+        e = tf.random.normal(tf.shape(z_mean))
         z = z_mean + tf.exp(0.5 * z_log_var) * e
 
         if training:
