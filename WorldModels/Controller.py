@@ -7,7 +7,7 @@ class _Controller(keras.Model):
         super().__init__()
 
         self.z_size = config.z_size
-        self.hidden_size = config.hidden_size
+        self.hidden_size = config.rnn_units
         self.action_num = config.action_num
 
         # Controller
