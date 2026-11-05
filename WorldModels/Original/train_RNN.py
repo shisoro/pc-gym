@@ -17,26 +17,33 @@ def train_rnn_step(rnn, optimizer, z, actions):
             training=True
         )
 
-        # 混合係数の対数softmax
-        log_pi = tf.nn.log_softmax(
-            pi, 
-            axis=-1
-        )
+        tf.print("pi range:",
+                tf.reduce_min(pi), tf.reduce_max(pi))
 
-        # 次状態の次元を追加
+        tf.print("mu range:",
+                tf.reduce_min(mu), tf.reduce_max(mu))
+
+        tf.print("log_sigma range:",
+                tf.reduce_min(log_sigma), tf.reduce_max(log_sigma))
+
+        log_pi = tf.nn.log_softmax(pi, axis=-1)
+
         z2 = tf.expand_dims(z2, axis=-1)
 
-        # 正規分布の対数確率密度
-        log_gauss = (
-            -0.5 * tf.math.log(2.0 * tf.constant(3.141592653589793)
-            - log_sigma     # 元は + 2.0 * log_sigma だった
-            + tf.square((z2 - mu) / tf.exp(log_sigma))
-            )
+        # 標準偏差
+        sigma = tf.exp(log_sigma)
+
+        # ガウス分布の対数確率密度
+        normalized_error = (z2 - mu) / sigma
+
+        log_prob = (
+            -0.5 * tf.math.log(2.0 * tf.constant(3.141592653589793))
+            - log_sigma
+            - 0.5 * tf.square(normalized_error) #tf.square(normalized_error)の係数を+1から-0.5に変更（計算式にミスがあったらしい）
         )
 
-        # 混合正規分布の負の対数尤度
         log_mix = tf.reduce_logsumexp(
-            log_pi + log_gauss,
+            log_pi + log_prob,
             axis=-1
         )
 
@@ -47,6 +54,22 @@ def train_rnn_step(rnn, optimizer, z, actions):
         loss,
         rnn.trainable_variables
     )
+
+    # 損失と勾配が有限値か確認
+    tf.debugging.assert_all_finite(loss, "Loss is NaN or Inf")
+
+    for i, grad in enumerate(grads):
+        if grad is not None:
+            tf.debugging.assert_all_finite(
+                grad,
+                f"Gradient {i} is NaN or Inf"
+            )
+
+    # 勾配全体の大きさを確認
+    global_norm = tf.linalg.global_norm(grads)
+
+    tf.print("NLL:", loss)
+    tf.print("Gradient global norm:", global_norm)
 
     # 重みを更新 --- 対応するタプルを生成
     optimizer.apply_gradients(

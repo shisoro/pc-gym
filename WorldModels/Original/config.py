@@ -17,10 +17,8 @@ class Config:
     num_mixture: int = 5  # number of mixtures in MDN
     temperature: float = 1.15
 
-    # Controller（GA）
-    num_simulations: int = 16
+    # Controller（CMA-ES）
     num_individual: int = 16
-    mutation: float = 0.01
-    randn_sigma: float = 1.0
-    blx_a: float = 0.1
+    num_generations: int = 2    # initial value 100
+    cma_sigma: float = 0.5
 
