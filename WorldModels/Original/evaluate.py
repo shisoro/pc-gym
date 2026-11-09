@@ -27,6 +27,7 @@ def evaluate_controller(
     controller,
     max_steps=1000
 ):
+    # 環境値を初期化
     obs, info = env.reset()
 
     # LSTMの初期状態
@@ -35,6 +36,24 @@ def evaluate_controller(
     )
 
     total_reward = 0.0
+
+    # ――― Controllerの性能を確認 ―――
+    action_history = []
+
+    # ループ内のControllerによる行動決定部分を変更
+    action = controller(z, hidden_state)
+    action = action.numpy()[0].astype(np.float32)
+
+    action_history.append(action)
+
+    if step % 50 == 0:
+        print(
+            f"Step {step}: "
+            f"steering={action[0]:.3f}, "
+            f"gas={action[1]:.3f}, "
+            f"brake={action[2]:.3f}"
+        )
+    # ―――――――――――――――――――――――――――
 
     for step in range(max_steps):
 
@@ -67,6 +86,17 @@ def evaluate_controller(
 
         if terminated or truncated:
             break
+
+        # ――― Controllerの性能を表示 ―――
+        action_history = np.array(action_history)
+
+        print("\n--- Action statistics ---")
+        print("Steering mean:", np.mean(action_history[:, 0]))
+        print("Gas mean:", np.mean(action_history[:, 1]))
+        print("Brake mean:", np.mean(action_history[:, 2]))
+        print("Gas max:", np.max(action_history[:, 1]))
+        print("Brake max:", np.max(action_history[:, 2]))
+        # ―――――――――――――――――――――――――――
 
     return total_reward
 
