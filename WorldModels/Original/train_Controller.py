@@ -120,11 +120,15 @@ def train_controller():
     )
 
     generation = 0
+    record_actions = False
 
     try:
         while not es.stop():
 
             generation += 1
+            # 最終評価時のみ行動履歴グラフを保存
+            if generation == config.num_generations:
+                record_actions = True
 
             # 個体の生成
             solutions = es.ask()
@@ -144,7 +148,9 @@ def train_controller():
                     env,
                     vae,
                     rnn,
-                    controller
+                    controller,
+                    seed=42 + generation,    # 世代ごとにシードを変更（固定したコースが学習されるのを防ぐため）
+                    record_actions=record_actions
                 )
 
                 # CMA-ESは最小化するため符号を反転
