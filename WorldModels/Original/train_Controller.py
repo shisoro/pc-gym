@@ -9,7 +9,9 @@ from VAE import _VAE
 from MDN_RNN import _MDNRNN
 from Controller import _Controller
 from evaluate import evaluate_controller
+from pathlib import Path
 
+BASE_DIR = Path(__file__).resolve().parent
 
 # -----------------------------
 # モデルの初期化と重みの読み込み
@@ -22,7 +24,7 @@ def load_models(config):
     dummy_image = tf.zeros((1, 64, 64, 3))
     vae(dummy_image, training=False)
 
-    vae.load_weights("models/vae.weights.h5")
+    vae.load_weights(BASE_DIR / "models/vae.weights.h5")
 
     # MDN-RNN
     rnn = _MDNRNN(config)
@@ -39,7 +41,7 @@ def load_models(config):
         training=False
     )
 
-    rnn.load_weights("models/mdn_rnn.weights.h5")
+    rnn.load_weights(BASE_DIR / "models/mdn_rnn.weights.h5")
 
     # Controller
     controller = _Controller(config)
@@ -188,7 +190,7 @@ def train_controller():
     os.makedirs("models", exist_ok=True)
 
     controller.save_weights(
-        "models/controller.weights.h5"
+        BASE_DIR / "models/controller.weights.h5"
     )
 
     print("Controllerの学習が完了しました。")
