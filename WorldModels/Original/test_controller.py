@@ -6,7 +6,10 @@ from VAE import _VAE
 from MDN_RNN import _MDNRNN
 from Controller import _Controller
 from evaluate import evaluate_controller
+from pathlib import Path
 
+
+BASE_DIR = Path(__file__).resolve().parent
 
 config = Config()
 
@@ -15,7 +18,7 @@ config = Config()
 # -------------------------
 vae = _VAE()
 vae(tf.zeros((1, 64, 64, 3)))
-vae.load_weights("models/vae.weights.h5")
+vae.load_weights(BASE_DIR / "models/vae.weights.h5")
 
 # -------------------------
 # MDN-RNNの読み込み
@@ -31,7 +34,7 @@ rnn(
     rnn.get_initial_state()
 )
 
-rnn.load_weights("models/mdn_rnn.weights.h5")
+rnn.load_weights(BASE_DIR / "models/mdn_rnn.weights.h5")
 
 # -------------------------
 # Controllerの読み込み
@@ -43,7 +46,7 @@ controller(
     rnn.get_initial_state()
 )
 
-controller.load_weights("models/controller.weights.h5")
+controller.load_weights(BASE_DIR / "models/controller.weights.h5")
 
 # -------------------------
 # 環境の作成と評価
