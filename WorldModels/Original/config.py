@@ -19,6 +19,6 @@ class Config:
 
     # Controller（CMA-ES）
     num_individual: int = 16
-    num_generations: int = 80    # initial value 100
+    num_generations: int = 50    # initial value 100
     cma_sigma: float = 0.5
 
