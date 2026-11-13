@@ -32,7 +32,7 @@ def main():
     h = np.concatenate(all_h, axis=0)
 
     # 隠れ状態の次元数の設定
-    h_dim = 12
+    h_dim = 15
     
     # PCAに入力する元データを保存
     h_original = h.copy()
@@ -138,7 +138,7 @@ def main():
     pca_10 = PCA(n_components=10)
     h_10 = pca_10.fit_transform(h)
 
-    k = 8
+    k = 10
 
     # KMeans
     kmeans = KMeans(

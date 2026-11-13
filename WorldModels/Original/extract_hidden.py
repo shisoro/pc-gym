@@ -98,7 +98,7 @@ def build_controller(config, rnn):
 
     from Controller import _Controller
 
-    path = BASE_DIR / "models/controller.weights.h5"
+    path = BASE_DIR / "models/controller_40_gen.weights.h5"
 
     if not path.is_file():
         raise FileNotFoundError(
