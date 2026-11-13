@@ -46,7 +46,7 @@ controller(
     rnn.get_initial_state()
 )
 
-controller.load_weights(BASE_DIR / "models/controller.weights.h5")
+controller.load_weights(BASE_DIR / "models/controller_60_gen.weights.h5")
 
 # -------------------------
 # 環境の作成と評価

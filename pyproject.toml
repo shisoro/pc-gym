@@ -11,6 +11,7 @@ dependencies = [
     "cma>=4.5.0",
     "gymnasium[box2d,classic-control]>=1.4.0",
     "matplotlib>=3.11.2",
+    "scikit-learn>=1.9.1",
     "tensorflow[and-cuda]>=2.21.0",
     "torch>=2.15.0",
     "torchvision>=0.29.2",
